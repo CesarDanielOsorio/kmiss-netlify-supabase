@@ -8,7 +8,9 @@ export function configurarCarga(entorno, ahora = new Date()) {
   if (baseUrl.toLowerCase() !== `https://${host}`) {
     throw new Error('BASE_URL debe coincidir exactamente con el host HTTPS de QA, sin ruta ni credenciales.');
   }
-  if (host === String(entorno.PROD_HOST || '').toLowerCase()) throw new Error('No se permite cargar producción.');
+  const hostProduccion = String(entorno.PROD_HOST || '').toLowerCase();
+  if (!/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(hostProduccion)) throw new Error('Configura PROD_HOST verificado antes de habilitar la carga.');
+  if (host === hostProduccion) throw new Error('No se permite cargar producción.');
   for (const campo of ['MEDICO_ID', 'SEDE_ID', 'SERVICIO_ID']) {
     if (!/^[1-9]\d*$/.test(String(entorno[campo] || ''))) throw new Error(`Configura ${campo} con un ID válido de QA.`);
   }

@@ -44,10 +44,20 @@ function validarProducto({ nombre, precio, costo, stock_actual, stock_minimo }) 
   };
 }
 
+function centavos(valor, campo) {
+  const resultado = Math.round((decimalNoNegativo(valor, campo) + Number.EPSILON) * 100);
+  if (!Number.isSafeInteger(resultado)) throw new Error(`${campo} supera el rango monetario permitido`);
+  return resultado;
+}
+
+function redondearMonto(valor, campo = 'monto') {
+  return centavos(valor, campo) / 100;
+}
+
 function validarDescuentoMonto(valor, subtotal) {
-  const descuento = decimalNoNegativo(valor ?? 0, 'descuento');
-  if (descuento > subtotal) throw new Error('descuento no puede superar el subtotal');
-  return descuento;
+  const descuento = centavos(valor ?? 0, 'descuento');
+  if (descuento > centavos(subtotal, 'subtotal')) throw new Error('descuento no puede superar el subtotal');
+  return descuento / 100;
 }
 
 module.exports = {
@@ -58,4 +68,5 @@ module.exports = {
   validarServicio,
   validarProducto,
   validarDescuentoMonto,
+  redondearMonto,
 };

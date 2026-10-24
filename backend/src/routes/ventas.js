@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const { autenticar, permitirRoles } = require('../middleware/auth');
-const { enteroPositivo, validarDescuentoMonto } = require('../domain/validation');
+const { enteroPositivo, validarDescuentoMonto, redondearMonto } = require('../domain/validation');
 
 const router = express.Router();
 router.use(autenticar);
@@ -34,7 +34,7 @@ async function guardarDetalleVenta(client, ventaId, item) {
     `INSERT INTO venta_detalles (venta_id, producto_id, servicio_id, descripcion, cantidad, precio_unitario, subtotal)
      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
     [ventaId, item.producto_id || null, item.servicio_id || null, item.descripcion,
-      item.cantidad, item.precio_unitario, item.cantidad * item.precio_unitario]
+      item.cantidad, item.precio_unitario, redondearMonto(item.cantidad * item.precio_unitario)]
   );
   if (item.producto_id) {
     await client.query('UPDATE productos SET stock_actual = stock_actual - $1 WHERE id = $2', [item.cantidad, item.producto_id]);
@@ -169,9 +169,9 @@ router.post('/', permitirRoles('administrador', 'recepcion'), async (req, res) =
       itemsValidados.push(await validarLineaVenta(client, item));
     }
 
-    const subtotal = itemsValidados.reduce((acc, i) => acc + (i.cantidad * i.precio_unitario), 0);
+    const subtotal = redondearMonto(itemsValidados.reduce((acc, i) => acc + redondearMonto(i.cantidad * i.precio_unitario), 0));
     const descuentoFinal = validarDescuentoMonto(descuento, subtotal);
-    const total = subtotal - descuentoFinal;
+    const total = redondearMonto(subtotal - descuentoFinal);
 
     const ventaResultado = await client.query(
       `INSERT INTO ventas (paciente_id, vendido_por, subtotal, descuento, total, metodo_pago)

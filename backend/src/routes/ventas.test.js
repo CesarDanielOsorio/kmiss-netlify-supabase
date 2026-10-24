@@ -10,9 +10,9 @@ const app = express();
 app.use(express.json());
 app.use('/ventas', require('./ventas'));
 
-function transaccion({ stock = 5, activo = true, fallaDetalle = false, estado = 'completada' } = {}) {
+function transaccion({ stock = 5, activo = true, fallaDetalle = false, estado = 'completada', precio = 40 } = {}) {
   return { release: jest.fn(), query: jest.fn(async (sql) => {
-    if (sql.startsWith('SELECT stock_actual')) return { rows: [{ stock_actual: stock, nombre: 'Gel', precio: 40, activo }] };
+    if (sql.startsWith('SELECT stock_actual')) return { rows: [{ stock_actual: stock, nombre: 'Gel', precio, activo }] };
     if (sql.startsWith('SELECT nombre, precio')) return { rows: [{ nombre: 'Consulta', precio: 100, activo: true }] };
     if (sql.startsWith('INSERT INTO ventas')) return { rows: [{ id: 21 }] };
     if (sql.startsWith('INSERT INTO venta_detalles') && fallaDetalle) throw new Error('No se guardó el detalle');
@@ -22,6 +22,26 @@ function transaccion({ stock = 5, activo = true, fallaDetalle = false, estado = 
   }) };
 }
 beforeEach(() => { pool.query.mockReset(); pool.connect.mockReset(); });
+
+test('acepta descuento completo de tres artículos de 19.90 sin saldo negativo', async () => {
+  const cliente = transaccion({ precio: '19.90' });
+  pool.connect.mockResolvedValue(cliente);
+  pool.query.mockResolvedValue({ rows: [{ id: 21 }] });
+  const r = await request(app).post('/ventas').send({ descuento: 59.70, items: [{ producto_id: 4, cantidad: 3 }] });
+  expect(r.status).toBe(201);
+  expect(cliente.query.mock.calls.find(([sql]) => sql.startsWith('INSERT INTO ventas'))[1]).toEqual([null, 9, 59.70, 59.70, 0, 'efectivo']);
+  expect(cliente.query.mock.calls.find(([sql]) => sql.startsWith('INSERT INTO venta_detalles'))[1][6]).toBe(59.70);
+  expect(cliente.query).toHaveBeenCalledWith('COMMIT');
+});
+
+test('guarda saldo de un centavo después de descontar 59.69', async () => {
+  const cliente = transaccion({ precio: '19.90' });
+  pool.connect.mockResolvedValue(cliente);
+  pool.query.mockResolvedValue({ rows: [{ id: 21 }] });
+  const r = await request(app).post('/ventas').send({ descuento: 59.69, items: [{ producto_id: 4, cantidad: 3 }] });
+  expect(r.status).toBe(201);
+  expect(cliente.query.mock.calls.find(([sql]) => sql.startsWith('INSERT INTO ventas'))[1][4]).toBe(0.01);
+});
 
 test('usa el precio del servidor aunque el cliente mande otro', async () => {
   const cliente = transaccion();

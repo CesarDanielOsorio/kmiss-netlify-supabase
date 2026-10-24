@@ -267,7 +267,7 @@ async function guardarCitaImportada({ paciente, servicio, sede, medico_id }, { f
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        if (medico_id) {
+        if (medico_id && !['cancelada', 'no_asistio'].includes(estado)) {
           await validarDisponibilidad(client, {
             medicoId: medico_id,
             sedeId: sede.rows[0].id,

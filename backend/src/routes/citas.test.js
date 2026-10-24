@@ -90,6 +90,18 @@ test('importar horario ocupado revierte solo la fila y registra el error', async
   expect(cliente.query).toHaveBeenCalledWith('ROLLBACK');
   expect(cliente.release).toHaveBeenCalledTimes(1);
 });
+
+test.each(['cancelada', 'no_asistio'])('importa cita %s aunque su horario haya sido reutilizado', async (estado) => {
+  XLSX.utils.sheet_to_json.mockReturnValue([{ paciente: 'Ana', servicio: 'Consulta', medico: 'Luis', fecha: '2035-10-20T10:00:00', estado }]);
+  pool.query.mockResolvedValue({ rows: [{ id: 2 }] });
+  validarDisponibilidad.mockRejectedValue(new Error('Horario ocupado por otra cita'));
+  const r = await request(app).post('/citas/importar');
+  expect(r.body).toEqual({ total: 1, creadas: 1, errores: [] });
+  expect(validarDisponibilidad).not.toHaveBeenCalled();
+  expect(cliente.query).toHaveBeenCalledWith('COMMIT');
+  expect(cliente.query).not.toHaveBeenCalledWith('ROLLBACK');
+  expect(cliente.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO citas'))[1][6]).toBe(estado);
+});
 test('una fila incompleta no consulta pacientes ni abre transacciones', async () => {
   XLSX.utils.sheet_to_json.mockReturnValue([{ paciente: 'Ana' }]);
   const r = await request(app).post('/citas/importar');

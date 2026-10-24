@@ -25,6 +25,8 @@ for (const [nombre, cambios] of [
   ['ruta en la URL base', { BASE_URL: entorno.BASE_URL + '/api' }],
   ['credenciales en URL', { BASE_URL: 'https://usuario:clave@kmiss-calidad-qa.azurewebsites.net' }],
   ['host de producción', { PROD_HOST: entorno.QA_HOST }],
+  ['producción sin identificar', { PROD_HOST: '' }],
+  ['variable productiva sin resolver', { PROD_HOST: '$(PROD_HOST_VERIFICADO)' }],
   ['nombre de ambiente ambiguo', { QA_HOST: 'produccion.azurewebsites.net' }],
   ['ID de médico sin configurar', { MEDICO_ID: '$(CARGA_MEDICO_ID)' }],
   ['ID de sede no positivo', { SEDE_ID: '0' }],

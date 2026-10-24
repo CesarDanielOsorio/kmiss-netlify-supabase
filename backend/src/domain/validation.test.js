@@ -1,6 +1,6 @@
 const {
   numero, enteroPositivo, enteroNoNegativo, decimalNoNegativo,
-  validarServicio, validarProducto, validarDescuentoMonto,
+  validarServicio, validarProducto, validarDescuentoMonto, redondearMonto,
 } = require('./validation');
 
 describe('validaciones numéricas', () => {
@@ -32,6 +32,11 @@ describe('validación de productos y descuentos', () => {
   test('rechaza stock actual negativo', () => expect(() => validarProducto({...base,stock_actual:-1})).toThrow('stock_actual'));
   test('rechaza stock mínimo decimal', () => expect(() => validarProducto({...base,stock_minimo:1.2})).toThrow('stock_minimo'));
   test('acepta descuento igual al subtotal', () => expect(validarDescuentoMonto(100,100)).toBe(100));
+  test('acepta descuento de 59.70 sobre tres productos de 19.90', () => expect(validarDescuentoMonto(59.70, 3 * 19.90)).toBe(59.70));
+  test('rechaza un centavo por encima del subtotal monetario', () => expect(() => validarDescuentoMonto(59.71, 3 * 19.90)).toThrow('superar'));
   test('rechaza descuento mayor al subtotal', () => expect(() => validarDescuentoMonto(101,100)).toThrow('superar'));
   test('rechaza descuento negativo', () => expect(() => validarDescuentoMonto(-1,100)).toThrow('mayor o igual'));
+  test('normaliza la suma decimal a centavos', () => expect(redondearMonto(0.1 + 0.2)).toBe(0.3));
+  test('redondea el medio centavo hacia arriba', () => expect(redondearMonto(1.005)).toBe(1.01));
+  test('rechaza montos fuera de precisión monetaria segura', () => expect(() => redondearMonto(Number.MAX_SAFE_INTEGER)).toThrow('rango monetario'));
 });
