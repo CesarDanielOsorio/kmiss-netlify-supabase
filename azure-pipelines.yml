@@ -116,6 +116,19 @@ stages:
           - script: npm run test:ci --prefix frontend
             displayName: Ejecutar pruebas unitarias del frontend
 
+          - script: node --test --test-reporter=spec --test-reporter=junit --test-reporter-destination=stdout --test-reporter-destination=carga-qa.xml scripts/carga-qa.test.mjs
+            displayName: Verificar controles y reporte de carga QA
+
+          - task: PublishTestResults@2
+            displayName: Publicar pruebas de preparación de QA
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: carga-qa.xml
+              testRunTitle: Controles de preparación QA KMISS
+              failTaskOnFailedTests: true
+              failTaskOnMissingResultsFile: true
+
           - script: >-
               node scripts/comparar-cobertura.cjs
               "$(Agent.TempDirectory)/kmiss-linea-base/backend/coverage/coverage-summary.json"
@@ -367,15 +380,48 @@ stages:
           - checkout: self
             displayName: Descargar escenario de carga
 
+          - task: UseNode@1
+            displayName: Preparar Node.js para verificar QA
+            inputs:
+              version: $(versionNode)
+
+          - script: |
+              mkdir -p load/resultados
+              set -o pipefail
+              node scripts/verificar-qa.mjs 2>&1 | tee load/resultados/preflight.log
+            displayName: Comprobar catálogo y horarios antes de cargar QA
+            env:
+              AMBIENTE: QA
+              QA_HOST: $(QA_HOST_VERIFICADO)
+              PROD_HOST: $(PROD_HOST_VERIFICADO)
+              BASE_URL: https://$(QA_HOST_VERIFICADO)
+              MEDICO_ID: $(CARGA_MEDICO_ID)
+              SEDE_ID: $(CARGA_SEDE_ID)
+              SERVICIO_ID: $(CARGA_SERVICIO_ID)
+              FECHA: $(CARGA_FECHA)
+
           - script: |
               mkdir -p "$(Build.SourcesDirectory)/load/resultados"
               docker run --rm \
-                -e BASE_URL="https://$(AZURE_WEBAPP_QA).azurewebsites.net" \
+                --user "$(id -u):$(id -g)" \
+                -e AMBIENTE=QA \
+                -e QA_HOST="$(QA_HOST_VERIFICADO)" \
+                -e PROD_HOST="$(PROD_HOST_VERIFICADO)" \
+                -e BASE_URL="https://$(QA_HOST_VERIFICADO)" \
+                -e MEDICO_ID="$(CARGA_MEDICO_ID)" \
+                -e SEDE_ID="$(CARGA_SEDE_ID)" \
+                -e SERVICIO_ID="$(CARGA_SERVICIO_ID)" \
+                -e FECHA="$(CARGA_FECHA)" \
+                -e RESUMEN_JSON=/scripts/resultados/resumen-k6.json \
                 -v "$(Build.SourcesDirectory)/load:/scripts" \
                 grafana/k6:0.54.0 run \
-                --summary-export=/scripts/resultados/resumen-k6.json \
+                --out json=/scripts/resultados/serie-k6.json.gz \
                 /scripts/kmiss-load.js
             displayName: Ejecutar rampa de 50 usuarios durante cinco minutos
+
+          - script: node scripts/resumir-carga.mjs load/resultados/resumen-k6.json load/resultados/informe-carga.md
+            displayName: Preparar reporte de métricas y umbrales
+            condition: succeededOrFailed()
 
           - task: PublishPipelineArtifact@1
             displayName: Conservar métricas de carga

@@ -15,4 +15,6 @@ Thumbs.db
 backend/coverage/
 test-results/
 load/results/
+load/resultados/
+carga-qa.xml
 junit.xml
