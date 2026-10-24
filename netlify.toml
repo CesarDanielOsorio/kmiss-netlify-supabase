@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "22"
   VITE_API_URL = "/api"
+  # Son opciones públicas de configuración, no credenciales.
+  SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,IMAGE_STORAGE,SUPABASE_STORAGE_BUCKET"
 
 [functions]
   node_bundler = "esbuild"
