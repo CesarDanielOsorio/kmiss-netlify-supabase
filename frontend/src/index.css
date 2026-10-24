@@ -725,4 +725,7 @@ input[type="number"]::-webkit-outer-spin-button { appearance: none; -webkit-appe
 @media(max-width:768px){.notificaciones-panel{bottom:20px;right:16px}.cal-navegacion{width:100%;justify-content:space-between}.cal-navegacion strong{min-width:0}.cal-filtros select{min-width:150px}}
 
 .cal-controles{flex-wrap:wrap}.cal-navegacion{margin-left:auto}
+/* The sticky sidebar forms a stacking context: keep its floating panel above calendar events. */
+.sidebar{z-index:5}
+.notificaciones-panel{bottom:64px}
 @media(max-width:1200px){.ajustes-layout{grid-template-columns:1fr}.ajustes-menu{flex-direction:row;overflow:auto}.ajustes-menu h2{display:none}.ajustes-menu button{white-space:nowrap}}
