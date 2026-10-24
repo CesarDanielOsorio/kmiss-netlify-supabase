@@ -8,7 +8,7 @@ const VACIO = { nombre: '', orden: 0, activo: true };
 const HOY = new Date().toISOString().split('T')[0];
 const PROMO_VACIA = { alcance: 'producto', producto_id: '', categoria_id: '', descuento_porcentaje: 10, fecha_inicio: HOY, fecha_fin: '', activo: true };
 const SEDE_VACIA = { nombre: '', direccion: '', telefono: '', activo: true };
-const BLOQUEO_VACIO = { medico_id: '', sede_id: '', fecha: HOY, fecha_fin: '', dia_completo: false, hora_inicio: '12:00', hora_fin: '13:00', motivo: 'Almuerzo' };
+const BLOQUEO_VACIO = { medico_id: '', sede_id: '', fecha: HOY, fecha_fin: HOY, dia_completo: true, hora_inicio: '08:00', hora_fin: '17:00', motivo: 'Vacaciones' };
 const NOTICIA_VACIA = { titulo: '', resumen: '', contenido: '', fecha_evento: '', enlace_url: '', activo: true };
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -221,7 +221,7 @@ export default function Ajustes() {
   }
   async function guardarBloqueo(e) {
     e.preventDefault();
-    try { await api.ajustes.bloqueos.crear(bloqueoFormulario); setModalBloqueo(false); setBloqueoFormulario(BLOQUEO_VACIO); cargar(); }
+    try { const resultado=await api.ajustes.bloqueos.crear(bloqueoFormulario); setModalBloqueo(false); setBloqueoFormulario(BLOQUEO_VACIO); cargar(); if(resultado.citas_afectadas) setError(`Excepción guardada. ${resultado.citas_afectadas} cita(s) existente(s) requieren revisión; se conservaron sin cancelar.`); }
     catch (err) { setError(err.message); }
   }
   async function eliminarBloqueo(id) {
@@ -405,16 +405,16 @@ export default function Ajustes() {
         {error && <p className="login-error">{error}</p>}<div className="modal-acciones"><button type="button" className="boton-secundario" onClick={() => setModalHorario(false)}>Cancelar</button><button className="boton-primario">Guardar horario semanal</button></div>
       </form></div></div>}
 
-      {modalBloqueo && <div className="modal-fondo" onClick={() => setModalBloqueo(false)}><div className="modal" onClick={(e) => e.stopPropagation()}><div className="modal-encabezado"><h2>Nueva excepción</h2><button className="modal-cerrar" onClick={() => setModalBloqueo(false)}><X size={18} /></button></div><form className="formulario-grid" onSubmit={guardarBloqueo}>
-        <label>Médico *<select required value={bloqueoFormulario.medico_id} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,medico_id:Number(e.target.value)})}><option value="">Selecciona</option>{medicos.map((m)=><option key={m.id} value={m.id}>{m.nombre}</option>)}</select></label>
-        <label>Sede *<select required value={bloqueoFormulario.sede_id} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,sede_id:Number(e.target.value)})}><option value="">Selecciona</option>{sedes.filter((s)=>s.activo).map((s)=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
-        <label>Fecha *<input type="date" required value={bloqueoFormulario.fecha} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,fecha:e.target.value})} /></label>
-        <label>Fecha final<input type="date" min={bloqueoFormulario.fecha} value={bloqueoFormulario.fecha_fin} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,fecha_fin:e.target.value})}/></label>
-        <label className="campo-checkbox campo-ancho"><input type="checkbox" checked={bloqueoFormulario.dia_completo} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,dia_completo:e.target.checked})}/>Días completos</label>
-        <label>Desde *<input type="time" required={!bloqueoFormulario.dia_completo} disabled={bloqueoFormulario.dia_completo} value={bloqueoFormulario.hora_inicio} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_inicio:e.target.value})} /></label>
-        <label>Hasta *<input type="time" required={!bloqueoFormulario.dia_completo} disabled={bloqueoFormulario.dia_completo} value={bloqueoFormulario.hora_fin} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_fin:e.target.value})} /></label>
-        <label className="campo-ancho">Motivo *<input required value={bloqueoFormulario.motivo} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,motivo:e.target.value})} /></label>
-        {error && <p className="login-error campo-ancho">{error}</p>}<div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={() => setModalBloqueo(false)}>Cancelar</button><button className="boton-primario">Guardar excepción</button></div>
+      {modalBloqueo && <div className="modal-fondo" onClick={() => setModalBloqueo(false)}><div className="modal modal-excepcion" role="dialog" aria-modal="true" aria-labelledby="excepcion-titulo" onClick={e=>e.stopPropagation()}><div className="modal-encabezado"><h2 id="excepcion-titulo">Nueva excepción</h2><button className="modal-cerrar" aria-label="Cerrar excepción" onClick={()=>setModalBloqueo(false)}><X size={18}/></button></div><form className="formulario-grid" onSubmit={guardarBloqueo}>
+        <label>Médico *<select required value={bloqueoFormulario.medico_id} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,medico_id:e.target.value})}><option value="">Selecciona</option>{medicos.map(m=><option key={m.id} value={m.id}>{m.nombre}</option>)}</select></label>
+        <label>Sede<select value={bloqueoFormulario.sede_id} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,sede_id:e.target.value})}><option value="">Todas las sedes</option>{sedes.filter(s=>s.activo).map(s=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
+        <label>Desde *<input type="date" required value={bloqueoFormulario.fecha} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,fecha:e.target.value})}/></label>
+        <label>Hasta (inclusive) *<input type="date" required min={bloqueoFormulario.fecha} value={bloqueoFormulario.fecha_fin} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,fecha_fin:e.target.value})}/></label>
+        <label className="campo-checkbox campo-ancho"><input type="checkbox" checked={bloqueoFormulario.dia_completo} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,dia_completo:e.target.checked})}/>Ausencia de día completo</label>
+        {!bloqueoFormulario.dia_completo&&<><label>Hora de inicio *<input type="time" required value={bloqueoFormulario.hora_inicio} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,hora_inicio:e.target.value})}/></label><label>Hora de fin *<input type="time" required value={bloqueoFormulario.hora_fin} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,hora_fin:e.target.value})}/></label></>}
+        <label className="campo-ancho">Motivo *<input required maxLength={150} value={bloqueoFormulario.motivo} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,motivo:e.target.value})}/></label>
+        <p className="campo-ancho cal-ayuda excepcion-ayuda">El médico no tendrá horas disponibles en ese período. Las citas existentes se conservarán y se avisará si alguna requiere revisión.</p>
+        {error&&<p className="login-error campo-ancho">{error}</p>}<div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={()=>setModalBloqueo(false)}>Cancelar</button><button className="boton-primario">Guardar</button></div>
       </form></div></div>}
     </div>
   );

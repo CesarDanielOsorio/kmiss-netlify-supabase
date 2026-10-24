@@ -39,7 +39,7 @@ router.get('/:id/historial', async (req, res) => {
     const [citas, ventas, pedidos] = await Promise.all([
       pool.query(
         `SELECT c.id, c.fecha_hora, c.estado, c.motivo_consulta, c.notas_medico,
-                s.nombre AS servicio, s.precio, u.nombre AS medico, se.nombre AS sede
+                COALESCE((SELECT string_agg(cs.nombre, ', ' ORDER BY cs.servicio_id) FROM cita_servicios cs WHERE cs.cita_id=c.id),s.nombre) AS servicio, COALESCE((SELECT sum(cs.precio) FROM cita_servicios cs WHERE cs.cita_id=c.id),s.precio) AS precio, u.nombre AS medico, se.nombre AS sede
          FROM citas c JOIN servicios s ON s.id=c.servicio_id
          LEFT JOIN usuarios u ON u.id=c.medico_id
          JOIN sedes se ON se.id=c.sede_id

@@ -182,3 +182,10 @@ La agenda se reconstruyó como cuadrícula horaria con filtros por sede y médic
 En una instalación Supabase existente, aplicar `db/calendarios.sql` una vez antes de publicar este código. No volver a ejecutar el instalador de base nueva. En la instalación utilizada ya se aplicó esta migración y se vincularon las tres asignaciones visibles en las capturas. Los contadores de asignaciones se calculan con los registros existentes: no se reconstruyeron asignaciones ocultas.
 
 La agenda usa horas de Guatemala para agrupar y mostrar las citas; el backend convierte el timestamp local a un instante con zona explícita. Las excepciones permiten rango de fechas y días completos. No se recuperó el código de Azure; se implementó el comportamiento visible aportado por el usuario.
+
+
+## Ventanas de referencia y citas con varios servicios
+
+Para una base Supabase existente, aplicar `db/citas-multiservicio.sql` antes de desplegar esta versión. Ya se aplicó en la instalación utilizada, conservando las tres citas y dos excepciones originales. Añade la duración total opcional y los servicios de una cita; las citas anteriores mantienen su comportamiento con el servicio principal. Las selecciones nuevas conservan nombres, precios y duraciones en `cita_servicios`. La disponibilidad pública e interna y la validación de cruces usan la duración total.
+
+Las excepciones admiten `sede_id` nulo para todas las sedes. La creación devuelve el número de citas existentes que requieren revisión, sin cancelarlas. La interfaz de calendario admite dos jornadas por día y permite quitar cada una. Los formularios usan columnas con ancho mínimo cero para que los selectores no ensanchen las ventanas de ventas.

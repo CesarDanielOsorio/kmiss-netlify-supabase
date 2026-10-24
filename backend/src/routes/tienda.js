@@ -101,7 +101,7 @@ router.get('/disponibilidad', async (req, res) => {
        FROM slots sl
        WHERE sl.inicio > NOW()
          AND NOT EXISTS (
-           SELECT 1 FROM bloqueos_medicos b WHERE b.medico_id=$1 AND b.sede_id=$2
+           SELECT 1 FROM bloqueos_medicos b WHERE b.medico_id=$1 AND (b.sede_id=$2 OR b.sede_id IS NULL)
              AND b.fecha=$4::date AND b.activo=TRUE
              AND b.hora_inicio < (sl.inicio + (sl.duracion_minutos || ' minutes')::interval)::time
              AND b.hora_fin > sl.inicio::time
@@ -110,7 +110,7 @@ router.get('/disponibilidad', async (req, res) => {
            SELECT 1 FROM citas c JOIN servicios cs ON cs.id=c.servicio_id
            WHERE c.medico_id=$1 AND c.estado NOT IN ('cancelada','no_asistio')
              AND c.fecha_hora < sl.inicio + (sl.duracion_minutos || ' minutes')::interval
-             AND c.fecha_hora + (cs.duracion_minutos || ' minutes')::interval > sl.inicio
+             AND c.fecha_hora + (COALESCE(c.duracion_total_minutos,cs.duracion_minutos) || ' minutes')::interval > sl.inicio
          )
        ORDER BY sl.inicio`,
       [medico_id, sede_id, servicio_id, fecha]

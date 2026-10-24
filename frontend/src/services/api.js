@@ -76,7 +76,7 @@ export const api = {
     sedes: () => peticion('/citas/sedes/lista'),
     medicos: (sedeId = '') => peticion(`/citas/medicos/lista${sedeId ? `?sede_id=${sedeId}` : ''}`),
     disponibilidad: (medicoId, sedeId, servicioId, fecha) =>
-      peticion(`/citas/disponibilidad?medico_id=${medicoId}&sede_id=${sedeId}&servicio_id=${servicioId}&fecha=${fecha}`),
+      peticion(`/citas/disponibilidad?medico_id=${medicoId}&sede_id=${sedeId}&${Array.isArray(servicioId)?'servicios_ids='+servicioId.join(','):'servicio_id='+servicioId}&fecha=${fecha}`),
     actualizar: (id, datos) => peticion(`/citas/${id}`, { method: 'PUT', body: JSON.stringify(datos) }),
     cambiarEstado: (id, estado) =>
       peticion(`/citas/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) }),

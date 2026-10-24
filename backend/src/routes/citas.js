@@ -4,6 +4,7 @@ const pool = require('../db');
 const { autenticar, permitirRoles } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { validarDisponibilidad } = require('../agenda');
+const {obtenerServicios,guardarServicios}=require('../servicios/citaServicios');
 
 const router = express.Router();
 router.use(autenticar);
@@ -13,7 +14,10 @@ const SELECT_BASE = `
   SELECT c.*,
          c.fecha_hora AT TIME ZONE 'America/Guatemala' AS fecha_hora,
          p.nombre_completo AS paciente_nombre,
-         s.nombre AS servicio_nombre, s.duracion_minutos, s.precio,
+         COALESCE((SELECT string_agg(cs.nombre, ', ' ORDER BY cs.servicio_id) FROM cita_servicios cs WHERE cs.cita_id=c.id),s.nombre) AS servicio_nombre,
+         COALESCE(c.duracion_total_minutos,s.duracion_minutos) AS duracion_minutos,
+         COALESCE((SELECT sum(cs.precio) FROM cita_servicios cs WHERE cs.cita_id=c.id),s.precio) AS precio,
+         COALESCE((SELECT json_agg(cs.servicio_id ORDER BY cs.servicio_id) FROM cita_servicios cs WHERE cs.cita_id=c.id),json_build_array(c.servicio_id)) AS servicios_ids,
          m.nombre AS medico_nombre, m.telefono AS medico_telefono,
          se.nombre AS sede_nombre, se.direccion AS sede_direccion
   FROM citas c
@@ -88,42 +92,43 @@ router.get('/sedes/lista', async (req, res) => {
 });
 
 router.get('/disponibilidad', async (req, res) => {
-  const { medico_id,sede_id,servicio_id,fecha }=req.query;
-  if (!medico_id || !sede_id || !servicio_id || !/^\d{4}-\d{2}-\d{2}$/.test(fecha||'')) return res.status(400).json({ error: 'Medico, sede, servicio y fecha son requeridos' });
+  const { medico_id,sede_id,servicio_id,servicios_ids,fecha }=req.query;
+  if (!medico_id || !sede_id || (!servicio_id && !servicios_ids) || !/^\d{4}-\d{2}-\d{2}$/.test(fecha||'')) return res.status(400).json({ error: 'Medico, sede, servicio y fecha son requeridos' });
   try {
+    const {duracion}=await obtenerServicios(pool,servicio_id,servicios_ids===undefined?undefined:String(servicios_ids).split(','));
     const resultado=await pool.query(`WITH datos AS (
-      SELECT s.duracion_minutos,(bloque->>'inicio')::time hora_inicio,(bloque->>'fin')::time hora_fin FROM servicios s
-      JOIN horarios_semanales h ON h.medico_id=$1 AND h.sede_id=$2 AND h.activo=TRUE
+      SELECT $3::integer AS duracion_minutos,(bloque->>'inicio')::time hora_inicio,(bloque->>'fin')::time hora_fin FROM horarios_semanales h
       CROSS JOIN LATERAL jsonb_array_elements(COALESCE(h.semana -> (EXTRACT(DOW FROM $4::date)::integer)::text,'[]'::jsonb)) bloque
-      WHERE s.id=$3 AND s.activo=TRUE
+      WHERE h.medico_id=$1 AND h.sede_id=$2 AND h.activo=TRUE
     ), slots AS (
       SELECT generate_series($4::date+d.hora_inicio,$4::date+d.hora_fin-(d.duracion_minutos||' minutes')::interval,INTERVAL '30 minutes') inicio,d.duracion_minutos FROM datos d
     ) SELECT DISTINCT TO_CHAR(sl.inicio,'HH24:MI') hora FROM slots sl WHERE sl.inicio>NOW()
-      AND NOT EXISTS (SELECT 1 FROM bloqueos_medicos b WHERE b.medico_id=$1 AND b.sede_id=$2 AND b.fecha=$4::date AND b.activo=TRUE AND b.hora_inicio<(sl.inicio+(sl.duracion_minutos||' minutes')::interval)::time AND b.hora_fin>sl.inicio::time)
-      AND NOT EXISTS (SELECT 1 FROM citas c JOIN servicios cs ON cs.id=c.servicio_id WHERE c.medico_id=$1 AND c.estado NOT IN ('cancelada','no_asistio') AND c.fecha_hora<sl.inicio+(sl.duracion_minutos||' minutes')::interval AND c.fecha_hora+(cs.duracion_minutos||' minutes')::interval>sl.inicio)
-      ORDER BY hora`,[medico_id,sede_id,servicio_id,fecha]);
+      AND NOT EXISTS (SELECT 1 FROM bloqueos_medicos b WHERE b.medico_id=$1 AND (b.sede_id=$2 OR b.sede_id IS NULL) AND b.fecha=$4::date AND b.activo=TRUE AND b.hora_inicio<(sl.inicio+(sl.duracion_minutos||' minutes')::interval)::time AND b.hora_fin>sl.inicio::time)
+      AND NOT EXISTS (SELECT 1 FROM citas c JOIN servicios cs ON cs.id=c.servicio_id WHERE c.medico_id=$1 AND c.estado NOT IN ('cancelada','no_asistio') AND c.fecha_hora<sl.inicio+(sl.duracion_minutos||' minutes')::interval AND c.fecha_hora+(COALESCE(c.duracion_total_minutos,cs.duracion_minutos)||' minutes')::interval>sl.inicio)
+      ORDER BY hora`,[medico_id,sede_id,duracion,fecha]);
     res.json(resultado.rows.map((r)=>r.hora));
-  } catch (error) { console.error('Error al consultar disponibilidad interna:',error); res.status(500).json({ error: 'No se pudo consultar la disponibilidad' }); }
+  } catch (error) { console.error('Error al consultar disponibilidad interna:',error); res.status(400).json({ error: 'No se pudo consultar la disponibilidad' }); }
 });
 
 // POST /api/citas — crear (admin y recepción)
 router.post('/', permitirRoles('administrador', 'recepcion', 'medico'), async (req, res) => {
-  const { paciente_id, servicio_id, medico_id, sede_id, fecha_hora, motivo_consulta } = req.body;
+  const { paciente_id, servicio_id, servicios_ids, medico_id, sede_id, fecha_hora, motivo_consulta } = req.body;
   const medicoFinal = req.usuario.rol === 'medico' ? req.usuario.id : medico_id;
 
-  if (!paciente_id || !servicio_id || !medicoFinal || !sede_id || !fecha_hora) {
+  if (!paciente_id || (!servicio_id && !servicios_ids?.length) || !medicoFinal || !sede_id || !fecha_hora) {
     return res.status(400).json({ error: 'Paciente, servicio, medico, sede y fecha/hora son requeridos' });
   }
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await validarDisponibilidad(client, { medicoId: medicoFinal, sedeId: sede_id, servicioId: servicio_id, fechaHora: fecha_hora });
+    const seleccion=await validarDisponibilidad(client, { medicoId: medicoFinal, sedeId: sede_id, servicioId: servicio_id, serviciosIds: servicios_ids, fechaHora: fecha_hora });
     const resultado = await client.query(
-      `INSERT INTO citas (paciente_id, servicio_id, medico_id, sede_id, fecha_hora, motivo_consulta, creado_por)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [paciente_id, servicio_id, medicoFinal, sede_id, fecha_hora, motivo_consulta || null, req.usuario.id]
+      `INSERT INTO citas (paciente_id, servicio_id, medico_id, sede_id, fecha_hora, motivo_consulta, creado_por,duracion_total_minutos)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,$8) RETURNING id`,
+      [paciente_id, seleccion.servicios[0].id, medicoFinal, sede_id, fecha_hora, motivo_consulta || null, req.usuario.id,seleccion.duracion]
     );
+    await guardarServicios(client,resultado.rows[0].id,seleccion.servicios);
     const citaCompleta = await client.query(`${SELECT_BASE} WHERE c.id = $1`, [resultado.rows[0].id]);
     await client.query('COMMIT');
     res.status(201).json(citaCompleta.rows[0]);
@@ -166,24 +171,26 @@ router.put('/:id/estado', async (req, res) => {
 
 // PUT /api/citas/:id — editar cita completa (admin y recepción)
 router.put('/:id', permitirRoles('administrador', 'recepcion', 'medico'), async (req, res) => {
-  const { paciente_id, servicio_id, medico_id, sede_id, fecha_hora, motivo_consulta, notas_medico } = req.body;
+  const { paciente_id, servicio_id, servicios_ids, medico_id, sede_id, fecha_hora, motivo_consulta, notas_medico } = req.body;
 
   const medicoFinal = req.usuario.rol === 'medico' ? req.usuario.id : medico_id;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await validarDisponibilidad(client, { medicoId: medicoFinal, sedeId: sede_id, servicioId: servicio_id, fechaHora: fecha_hora, excluirCitaId: req.params.id });
+    const seleccion=await validarDisponibilidad(client, { medicoId: medicoFinal, sedeId: sede_id, servicioId: servicio_id, serviciosIds: servicios_ids, fechaHora: fecha_hora, excluirCitaId: req.params.id });
     const resultado = await client.query(
       `UPDATE citas SET
         paciente_id = $1, servicio_id = $2, medico_id = $3, sede_id=$4, fecha_hora = $5,
-        motivo_consulta = $6, notas_medico = $7, actualizado_en = NOW()
+        motivo_consulta = $6, notas_medico = $7, duracion_total_minutos=$9, actualizado_en = NOW()
        WHERE id = $8 RETURNING id`,
-      [paciente_id, servicio_id, medicoFinal, sede_id, fecha_hora,
-        motivo_consulta || null, notas_medico || null, req.params.id]
+      [paciente_id, seleccion.servicios[0].id, medicoFinal, sede_id, fecha_hora,
+        motivo_consulta || null, notas_medico || null, req.params.id,seleccion.duracion]
     );
     if (resultado.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Cita no encontrada' });
     }
+    await guardarServicios(client,req.params.id,seleccion.servicios);
     const citaCompleta = await client.query(`${SELECT_BASE} WHERE c.id = $1`, [req.params.id]);
     await client.query('COMMIT');
     res.json(citaCompleta.rows[0]);

@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ImportarExcel from '../components/ImportarExcel';
 
-const VACIO = { paciente_id: '', sede_id: '', servicio_id: '', medico_id: '', fecha: '', hora: '', motivo_consulta: '' };
+const VACIO = { paciente_id: '', sede_id: '', servicios_ids: [], medico_id: '', fecha: '', hora: '', motivo_consulta: '' };
 const ESTADOS = {
   solicitada: ['Solicitada', 'estado-programada'], programada: ['Programada', 'estado-programada'],
   confirmada: ['Confirmada', 'estado-confirmada'], atendida: ['Atendida', 'estado-atendida'],
@@ -78,12 +78,14 @@ export default function Citas() {
     api.citas.medicos(formulario.sede_id).then(setMedicos).catch(() => setMedicos([]));
   }, [formulario.sede_id]);
   useEffect(() => {
-    const { medico_id, sede_id, servicio_id, fecha } = formulario;
-    if (!medico_id || !sede_id || !servicio_id || !fecha) { setHorarios([]); return; }
+    const { medico_id, sede_id, servicios_ids, fecha } = formulario;
+    if (!medico_id || !sede_id || !servicios_ids.length || !fecha) { setHorarios([]); setCargandoHorarios(false); return; }
+    let vigente = true;
     setCargandoHorarios(true); setFormulario((actual) => ({ ...actual, hora: '' }));
-    api.citas.disponibilidad(medico_id, sede_id, servicio_id, fecha)
-      .then(setHorarios).catch((err) => setError(err.message)).finally(() => setCargandoHorarios(false));
-  }, [formulario.medico_id, formulario.sede_id, formulario.servicio_id, formulario.fecha]);
+    api.citas.disponibilidad(medico_id, sede_id, servicios_ids, fecha)
+      .then(datos=>{if(vigente)setHorarios(datos);}).catch((err) => {if(vigente)setError(err.message);}).finally(() => {if(vigente)setCargandoHorarios(false);});
+    return ()=>{vigente=false;};
+  }, [formulario.medico_id, formulario.sede_id, formulario.servicios_ids, formulario.fecha]);
 
   function abrirNueva(fecha = null) {
     const sedeInicial = sedeFiltro || (sedes.length === 1 ? String(sedes[0].id) : '');
@@ -138,14 +140,14 @@ export default function Citas() {
       <div className="modal-encabezado"><h2>Nueva cita</h2><button className="modal-cerrar" onClick={() => setModal(false)}><X size={18} /></button></div>
       <form className="formulario-grid" onSubmit={guardar}>
         <label className="campo-ancho">Paciente *<select required value={formulario.paciente_id} onChange={(e) => setFormulario({...formulario,paciente_id:e.target.value})}><option value="">Selecciona un paciente</option>{pacientes.map((p)=><option key={p.id} value={p.id}>{p.nombre_completo}</option>)}</select></label>
-        <label className="campo-ancho">Establecimiento *<select required value={formulario.sede_id} onChange={(e) => setFormulario({...formulario,sede_id:e.target.value,medico_id:'',hora:''})}><option value="">Selecciona una sede</option>{sedes.map((s)=><option key={s.id} value={s.id}>{s.nombre} · {s.direccion}</option>)}</select></label>
-        <label>Servicio *<select required value={formulario.servicio_id} onChange={(e) => setFormulario({...formulario,servicio_id:e.target.value,hora:''})}><option value="">Selecciona un servicio</option>{servicios.filter((s)=>s.activo).map((s)=><option key={s.id} value={s.id}>{s.nombre} · {s.duracion_minutos} min</option>)}</select></label>
+        <label className="campo-ancho">Establecimiento *<select required value={formulario.sede_id} onChange={(e) => setFormulario({...formulario,sede_id:e.target.value,medico_id:usuario.rol==='medico'?usuario.id:'',hora:''})}><option value="">Selecciona una sede</option>{sedes.map((s)=><option key={s.id} value={s.id}>{s.nombre} · {s.direccion}</option>)}</select></label>
+        <fieldset className="campo-ancho cita-servicios"><legend>Servicios *</legend>{servicios.filter(s=>s.activo).map(s=><label className="cita-servicio-opcion" key={s.id}><input type="checkbox" checked={formulario.servicios_ids.includes(s.id)} onChange={e=>setFormulario({...formulario,servicios_ids:e.target.checked?[...formulario.servicios_ids,s.id]:formulario.servicios_ids.filter(id=>id!==s.id),hora:''})}/><strong>{s.nombre}</strong><small>{s.duracion_minutos} min</small></label>)}<p>{formulario.servicios_ids.length?`${formulario.servicios_ids.length} servicio(s) · ${servicios.filter(s=>formulario.servicios_ids.includes(s.id)).reduce((sum,s)=>sum+Number(s.duracion_minutos),0)} min`:'Selecciona al menos un servicio'}</p></fieldset>
         <label>Médico *<select required disabled={!formulario.sede_id || usuario.rol==='medico'} value={formulario.medico_id} onChange={(e) => setFormulario({...formulario,medico_id:e.target.value,hora:''})}><option value="">Selecciona un médico</option>{medicos.map((m)=><option key={m.id} value={m.id}>{m.nombre}</option>)}</select></label>
         <label>Fecha *<input type="date" required value={formulario.fecha} onChange={(e) => setFormulario({...formulario,fecha:e.target.value,hora:''})} /></label>
         <label>Horario disponible *<select required disabled={!formulario.fecha || cargandoHorarios} value={formulario.hora} onChange={(e) => setFormulario({...formulario,hora:e.target.value})}><option value="">{cargandoHorarios ? 'Consultando...' : horarios.length ? 'Selecciona una hora' : 'No hay horarios disponibles'}</option>{horarios.map((h)=><option key={h} value={h}>{h}</option>)}</select></label>
         <label className="campo-ancho">Motivo<textarea rows={2} value={formulario.motivo_consulta} onChange={(e) => setFormulario({...formulario,motivo_consulta:e.target.value})} /></label>
         {error && <p className="login-error campo-ancho">{error}</p>}
-        <div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={() => setModal(false)}>Cancelar</button><button className="boton-primario" disabled={!formulario.hora}><CalendarDays size={16} /> Agendar</button></div>
+        <div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={() => setModal(false)}>Cancelar</button><button className="boton-primario" disabled={!formulario.hora || !formulario.servicios_ids.length || cargandoHorarios}><CalendarDays size={16} /> Agendar</button></div>
       </form>
     </div></div>}
   </div>;

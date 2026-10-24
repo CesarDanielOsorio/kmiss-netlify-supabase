@@ -378,3 +378,15 @@ CREATE TABLE IF NOT EXISTS calendarios (
  creado_en TIMESTAMP NOT NULL DEFAULT NOW(), actualizado_en TIMESTAMP NOT NULL DEFAULT NOW()
 );
 ALTER TABLE horarios_semanales ADD COLUMN IF NOT EXISTS calendario_id INTEGER REFERENCES calendarios(id) ON DELETE RESTRICT;
+
+-- Multiple services per appointment and global absences.
+ALTER TABLE citas ADD COLUMN IF NOT EXISTS duracion_total_minutos INTEGER CHECK(duracion_total_minutos>0);
+CREATE TABLE IF NOT EXISTS cita_servicios (
+ cita_id INTEGER NOT NULL REFERENCES citas(id) ON DELETE CASCADE,
+ servicio_id INTEGER NOT NULL REFERENCES servicios(id),
+ nombre VARCHAR(150) NOT NULL,
+ duracion_minutos INTEGER NOT NULL CHECK(duracion_minutos>0),
+ precio NUMERIC(10,2) NOT NULL,
+ PRIMARY KEY(cita_id,servicio_id)
+);
+ALTER TABLE bloqueos_medicos ALTER COLUMN sede_id DROP NOT NULL;

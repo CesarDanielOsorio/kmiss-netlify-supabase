@@ -257,13 +257,13 @@ export default function Ventas() {
 
       {modalAbierto && (
         <div className="modal-fondo" onClick={() => setModalAbierto(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 640 }}>
+          <div className="modal modal-venta" role="dialog" aria-modal="true" aria-labelledby="nueva-venta-titulo" onClick={(e) => e.stopPropagation()}>
             <div className="modal-encabezado">
-              <h2>Nueva venta</h2>
+              <h2 id="nueva-venta-titulo">Nueva venta</h2>
               <button className="modal-cerrar" onClick={() => setModalAbierto(false)}><X size={18} /></button>
             </div>
 
-            <div className="formulario-grid">
+            <div className="formulario-grid venta-articulos">
               <label className="campo-ancho">Paciente (opcional)
                 <select value={pacienteId} onChange={(e) => setPacienteId(e.target.value)}>
                   <option value="">Venta sin asociar a paciente</option>
@@ -299,14 +299,14 @@ export default function Ventas() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input type="number" min="1" value={cantidadSeleccionada}
                     onChange={(e) => setCantidadSeleccionada(Number(e.target.value))} style={{ flex: 1 }} />
-                  <button type="button" className="boton-secundario" onClick={agregarAlCarrito}>
+                  <button type="button" className="boton-secundario" aria-label="Agregar al carrito" onClick={agregarAlCarrito}>
                     <Plus size={15} strokeWidth={2} />
                   </button>
                 </div>
               </label>
             </div>
 
-            <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <div className="venta-carrito">
               {carrito.length === 0 ? (
                 <p className="texto-vacio" style={{ padding: '12px 0' }}>El carrito está vacío.</p>
               ) : (
