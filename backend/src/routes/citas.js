@@ -11,6 +11,7 @@ router.use(autenticar);
 // Consulta base con joins para traer datos legibles, no solo IDs
 const SELECT_BASE = `
   SELECT c.*,
+         c.fecha_hora AT TIME ZONE 'America/Guatemala' AS fecha_hora,
          p.nombre_completo AS paciente_nombre,
          s.nombre AS servicio_nombre, s.duracion_minutos, s.precio,
          m.nombre AS medico_nombre, m.telefono AS medico_telefono,
