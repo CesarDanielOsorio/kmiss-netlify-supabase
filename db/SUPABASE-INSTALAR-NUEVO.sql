@@ -383,13 +383,22 @@ FROM pacientes pa
 WHERE p.paciente_id IS NULL
   AND (pa.telefono = p.telefono OR (p.email IS NOT NULL AND LOWER(pa.email) = LOWER(p.email)));
 
+
+-- Reusable calendars; materialized weekly schedules remain the availability source.
+CREATE TABLE IF NOT EXISTS calendarios (
+ id SERIAL PRIMARY KEY, nombre VARCHAR(150) NOT NULL UNIQUE,
+ semana JSONB NOT NULL DEFAULT '{}'::jsonb,
+ creado_en TIMESTAMP NOT NULL DEFAULT NOW(), actualizado_en TIMESTAMP NOT NULL DEFAULT NOW()
+);
+ALTER TABLE horarios_semanales ADD COLUMN IF NOT EXISTS calendario_id INTEGER REFERENCES calendarios(id) ON DELETE RESTRICT;
+
 -- Ejecutar DESPUÉS de init.sql, solo en el proyecto Supabase de KMISS.
 -- Las tablas se consultan desde Express con PostgreSQL, no desde la API pública.
 DO $$
 DECLARE tabla text;
 BEGIN
   FOREACH tabla IN ARRAY ARRAY[
-    'usuarios','pacientes','servicios','citas','sedes','horarios_semanales',
+    'usuarios','pacientes','servicios','citas','sedes','horarios_semanales','calendarios',
     'bloqueos_medicos','categorias_productos','productos','ventas','venta_detalles',
     'promociones_productos','noticias','pedidos_publicos','pedido_detalles'
   ] LOOP

@@ -695,3 +695,34 @@ input[type="number"]::-webkit-outer-spin-button { appearance: none; -webkit-appe
   .producto-hover-detalle, .servicio-hover-detalle { bottom: 92px; }
   .modal { width: calc(100% - 20px); max-height: calc(100vh - 20px); padding: 18px; overflow-y: auto; }
 }
+
+/* Weekly timetable and settings reconstructed from the supplied reference screens. */
+.cal-controles,.cal-filtros,.cal-navegacion{display:flex;align-items:center;gap:10px}
+.cal-controles{justify-content:space-between;margin-bottom:16px;gap:24px}
+.cal-filtros{gap:16px}.cal-filtros label{display:flex;align-items:center;gap:8px;color:var(--color-text-muted);font-size:13px;font-weight:600}
+.cal-filtros select{min-width:180px;border:1px solid var(--color-border);border-radius:6px;padding:9px 10px;background:white;color:var(--color-primary)}
+.cal-navegacion strong{min-width:190px;text-align:center;font-size:15px}
+.cal-leyenda{display:flex;gap:18px;align-items:center;color:var(--color-text-muted);font-size:12px;margin-bottom:16px;flex-wrap:wrap}
+.cal-leyenda span{display:flex;gap:7px;align-items:center}.cal-leyenda i{width:9px;height:9px;border-radius:1px}.marca-programada{background:var(--color-gold)}.marca-confirmada{background:#3f6d50}
+.cal-scroll{height:calc(100vh - 270px);min-height:400px;overflow:auto;border:1px solid var(--color-border);border-radius:8px;background:white}
+.cal-grid{min-width:1000px}.cal-cabecera{display:grid;grid-template-columns:64px repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:3;background:white;border-bottom:1px solid var(--color-border)}
+.cal-cabecera>div,.cal-cabecera>button{height:68px;border:0;border-right:1px solid var(--color-border);background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--color-text-muted);font-size:12px;text-transform:capitalize}
+.cal-cabecera strong{font-size:22px;color:var(--color-primary)}.cal-cabecera>div{font-size:11px}
+.cal-cuerpo{display:grid;grid-template-columns:64px repeat(7,minmax(0,1fr))}
+.cal-horas>div{height:96px;padding:7px 8px;font-family:monospace;font-size:11px;color:#3e5b66;border-top:1px solid var(--color-border)}
+.cal-columna{height:1344px;position:relative;border-left:1px solid var(--color-border);background:repeating-linear-gradient(to bottom,transparent 0,transparent 47px,var(--color-border) 47px,var(--color-border) 48px)}
+.cal-columna.cal-hoy,.cal-cabecera>.cal-hoy{background-color:var(--color-sage-tint)}
+.cal-evento{position:absolute;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:0;border-left:3px solid var(--color-gold);border-radius:4px;padding:5px 6px;background:#f5eddb;color:#172b34;font-size:11px;line-height:1.3;z-index:1}
+.cal-evento:hover,.cal-evento:focus-visible{outline:2px solid #253d35;z-index:2}.cal-evento>span{font-family:monospace;font-size:10px}.cal-evento>strong{font-size:11px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}.cal-evento>small{font-size:10px}
+.cal-estado-confirmada,.cal-estado-atendida{background:#e2ece5;border-left-color:#3f6d50}.cal-estado-cancelada,.cal-estado-no_asistio{background:#f3e6e4;border-left-color:#ab574a}
+.cita-detalle-info{padding-top:8px}.cita-detalle-info>strong{font-size:15px}.cita-detalle-info p{margin:12px 0}.cita-detalle-acciones{flex-wrap:wrap;margin-top:24px}
+.ajustes-layout{display:grid;grid-template-columns:210px minmax(0,1080px);gap:24px;align-items:start}.ajustes-menu{background:white;border:1px solid var(--color-border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:3px}.ajustes-menu h2{font-family:inherit;font-size:15px;margin:8px 8px 10px;font-weight:700}.ajustes-menu button{border:0;background:transparent;text-align:left;padding:11px 9px;border-radius:6px;font-size:13px;color:var(--color-text-muted)}.ajustes-menu button.activo{background:#282622;color:white}.ajustes-menu button:hover:not(.activo){background:var(--color-bg)}
+.ajustes-contenido{min-width:0}.ajustes-contenido>.ajustes-seccion:first-child{margin-top:0}.cal-plantillas{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0;font-size:13px}.cal-nombre{display:flex;flex-direction:column;gap:7px;margin-bottom:20px;font-size:13px;font-weight:600}.cal-nombre input{border:1px solid var(--color-border);padding:10px;border-radius:6px}
+.sidebar-notificaciones{width:100%;border:0;background:transparent;text-align:left;font-family:inherit}
+.notificaciones-panel{position:fixed;right:24px;bottom:24px;width:380px;max-width:calc(100vw - 32px);z-index:1100;background:white;border:1px solid var(--color-border);border-radius:12px;box-shadow:0 14px 35px #0003;color:var(--color-text)}
+.notificaciones-panel header{display:flex;align-items:flex-start;justify-content:space-between;padding:18px;border-bottom:1px solid var(--color-border)}.notificaciones-panel h2{font-family:inherit;font-size:15px;margin:0 0 6px;font-weight:700}.notificaciones-panel small{font-size:12px;color:var(--color-text-muted)}.notificaciones-panel header button{background:transparent;border:0;padding:2px;color:inherit}.notificaciones-lista{max-height:320px;overflow:auto;padding:16px 18px;font-size:13px;min-height:72px}.notificaciones-lista a{display:flex;flex-direction:column;gap:5px;padding:10px 0;color:inherit;text-decoration:none}.notificaciones-panel footer{padding:14px 18px;text-align:center}.notificaciones-panel footer a{color:inherit;font-weight:700;text-decoration:underline}
+@media(max-width:1000px){.ajustes-layout{grid-template-columns:1fr}.ajustes-menu{flex-direction:row;overflow:auto}.ajustes-menu h2{display:none}.ajustes-menu button{white-space:nowrap}.cal-controles{flex-wrap:wrap}.cal-filtros{flex-wrap:wrap}.cal-scroll{height:65vh}}
+@media(max-width:768px){.notificaciones-panel{bottom:20px;right:16px}.cal-navegacion{width:100%;justify-content:space-between}.cal-navegacion strong{min-width:0}.cal-filtros select{min-width:150px}}
+
+.cal-controles{flex-wrap:wrap}.cal-navegacion{margin-left:auto}
+@media(max-width:1200px){.ajustes-layout{grid-template-columns:1fr}.ajustes-menu{flex-direction:row;overflow:auto}.ajustes-menu h2{display:none}.ajustes-menu button{white-space:nowrap}}

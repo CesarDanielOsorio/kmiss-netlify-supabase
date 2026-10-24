@@ -107,6 +107,15 @@ export const api = {
   },
 
   ajustes: {
+    calendarios: {
+      listar: () => peticion('/ajustes/calendarios'),
+      crear: datos => peticion('/ajustes/calendarios', {method:'POST',body:JSON.stringify(datos)}),
+      actualizar: (id,datos) => peticion(`/ajustes/calendarios/${id}`, {method:'PUT',body:JSON.stringify(datos)}),
+      eliminar: id => peticion(`/ajustes/calendarios/${id}`, {method:'DELETE'}),
+      asignaciones: () => peticion('/ajustes/calendarios/asignaciones'),
+      asignar: datos => peticion('/ajustes/calendarios/asignaciones', {method:'POST',body:JSON.stringify(datos)}),
+      actualizarAsignacion: (id,datos) => peticion(`/ajustes/calendarios/asignaciones/${id}`, {method:'PUT',body:JSON.stringify(datos)}),
+    },
     categorias: {
       listar: () => peticion('/ajustes/categorias'),
       crear: (datos) => peticion('/ajustes/categorias', { method: 'POST', body: JSON.stringify(datos) }),

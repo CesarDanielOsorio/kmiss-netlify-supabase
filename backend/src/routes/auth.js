@@ -44,8 +44,14 @@ router.post('/login', async (req, res) => {
 
 // GET /api/auth/me — valida el token actual y devuelve el usuario
 const { autenticar } = require('../middleware/auth');
-router.get('/me', autenticar, (req, res) => {
-  res.json({ usuario: req.usuario });
+router.get('/me', autenticar, async (req, res) => {
+  try {
+    const r = await pool.query('SELECT id,nombre,email,rol,activo FROM usuarios WHERE id=$1',[req.usuario.id]);
+    const usuario=r.rows[0];
+    if(!usuario?.activo)return res.status(403).json({error:'Usuario inactivo o no disponible'});
+    const {activo,...datos}=usuario;
+    res.json({usuario:datos});
+  }catch(e){res.status(500).json({error:'No se pudo consultar el usuario'});}
 });
 
 module.exports = router;

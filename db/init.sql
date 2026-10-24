@@ -370,3 +370,11 @@ UPDATE pedidos_publicos p SET paciente_id = pa.id
 FROM pacientes pa
 WHERE p.paciente_id IS NULL
   AND (pa.telefono = p.telefono OR (p.email IS NOT NULL AND LOWER(pa.email) = LOWER(p.email)));
+
+-- Reusable calendars; materialized weekly schedules remain the availability source.
+CREATE TABLE IF NOT EXISTS calendarios (
+ id SERIAL PRIMARY KEY, nombre VARCHAR(150) NOT NULL UNIQUE,
+ semana JSONB NOT NULL DEFAULT '{}'::jsonb,
+ creado_en TIMESTAMP NOT NULL DEFAULT NOW(), actualizado_en TIMESTAMP NOT NULL DEFAULT NOW()
+);
+ALTER TABLE horarios_semanales ADD COLUMN IF NOT EXISTS calendario_id INTEGER REFERENCES calendarios(id) ON DELETE RESTRICT;

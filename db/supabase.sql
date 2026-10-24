@@ -5,7 +5,7 @@ DO $$
 DECLARE tabla text;
 BEGIN
   FOREACH tabla IN ARRAY ARRAY[
-    'usuarios','pacientes','servicios','citas','sedes','horarios_semanales',
+    'usuarios','pacientes','servicios','citas','sedes','horarios_semanales','calendarios',
     'bloqueos_medicos','categorias_productos','productos','ventas','venta_detalles',
     'promociones_productos','noticias','pedidos_publicos','pedido_detalles'
   ] LOOP

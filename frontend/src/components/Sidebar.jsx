@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { LayoutGrid, Users, Stethoscope, CalendarDays, LogOut, Package, ShoppingCart, ClipboardList, UserCog, Settings } from 'lucide-react';
+import { NavLink, Link } from 'react-router-dom';
+import { LayoutGrid, Users, Stethoscope, CalendarDays, LogOut, Package, ShoppingCart, ClipboardList, UserCog, Settings, Bell, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config';
 import { api } from '../services/api';
@@ -14,6 +14,10 @@ const ETIQUETAS_ROL = {
 
 export default function Sidebar() {
   const { usuario, cerrarSesion } = useAuth();
+  const [notificaciones,setNotificaciones]=useState(false);
+  const [pendientes,setPendientes]=useState([]);
+  const [cargando,setCargando]=useState(false);
+  const [error,setError]=useState('');
   const [pedidosNuevos, setPedidosNuevos] = useState(0);
 
   useEffect(() => {
@@ -24,8 +28,16 @@ export default function Sidebar() {
       .catch(() => {});
     cargar();
     const intervalo = setInterval(cargar, 30000);
-    return () => { activo = false; clearInterval(intervalo); };
+  return () => { activo = false; clearInterval(intervalo); };
   }, [usuario?.rol]);
+
+    useEffect(()=>{
+    if(!notificaciones)return undefined;
+    let vigente=true;setCargando(true);setError('');
+    api.pedidos.listar({estado:'nuevo'}).then(datos=>{if(vigente){setPendientes(datos);setPedidosNuevos(datos.length);}}).catch(e=>{if(vigente)setError(e.message);}).finally(()=>{if(vigente)setCargando(false);});
+    const cerrar=e=>{if(e.key==='Escape')setNotificaciones(false);};document.addEventListener('keydown',cerrar);
+    return()=>{vigente=false;document.removeEventListener('keydown',cerrar);};
+  },[notificaciones]);
 
   return (
     <aside className="sidebar">
@@ -77,7 +89,10 @@ export default function Sidebar() {
             </NavLink>
           </>
         )}
+        {['administrador','recepcion'].includes(usuario?.rol)&&<button className="sidebar-link sidebar-notificaciones" aria-expanded={notificaciones} aria-controls="panel-notificaciones" onClick={()=>setNotificaciones(n=>!n)}><Bell size={18} strokeWidth={1.75}/><span>Notificaciones</span>{pedidosNuevos>0&&<span className="sidebar-contador">{pedidosNuevos}</span>}</button>}
       </nav>
+      {notificaciones&&<section id="panel-notificaciones" className="notificaciones-panel" role="dialog" aria-labelledby="notificaciones-titulo"><header><div><h2 id="notificaciones-titulo">Pedidos por revisar</h2><small>{pedidosNuevos} pendiente(s)</small></div><button aria-label="Cerrar notificaciones" onClick={()=>setNotificaciones(false)}><X size={18}/></button></header><div className="notificaciones-lista">{cargando?<p>Cargando pedidos…</p>:error?<p role="alert">{error}</p>:pendientes.length?pendientes.slice(0,5).map(p=><Link key={p.id} to="/pedidos" onClick={()=>setNotificaciones(false)}><strong>Pedido #{p.id} · {p.nombre_cliente}</strong><small>Q{Number(p.total).toFixed(2)} · Pendiente de revisión</small></Link>):<p>No hay pedidos pendientes de revisión.</p>}</div><footer><Link to="/pedidos" onClick={()=>setNotificaciones(false)}>Ver todos los pedidos</Link></footer></section>}
+
 
       <div className="sidebar-usuario">
         <div className="sidebar-usuario-info">

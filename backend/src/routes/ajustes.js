@@ -8,33 +8,8 @@ const router = express.Router();
 router.use(autenticar);
 router.use(permitirRoles('administrador'));
 
-function normalizarSemana(valor) {
-  const semana = {};
-  const horaValida = /^([01]\d|2[0-3]):[0-5]\d$/;
-  for (let dia = 0; dia <= 6; dia++) {
-    const bloques = Array.isArray(valor?.[dia]) ? valor[dia] : [];
-    semana[dia] = bloques.map((bloque) => ({ inicio: bloque.inicio, fin: bloque.fin }))
-      .filter((bloque) => bloque.inicio || bloque.fin)
-      .sort((a, b) => a.inicio.localeCompare(b.inicio));
-    for (let i = 0; i < semana[dia].length; i++) {
-      const bloque = semana[dia][i];
-      if (!horaValida.test(bloque.inicio || '') || !horaValida.test(bloque.fin || '') || bloque.fin <= bloque.inicio) {
-        throw new Error('Cada turno debe tener una hora inicial y final validas');
-      }
-      if (i > 0 && semana[dia][i - 1].fin > bloque.inicio) throw new Error('Hay turnos que se cruzan en un mismo dia');
-    }
-  }
-  return semana;
-}
-
-function semanasSeCruzan(semanaA, semanaB) {
-  for (let dia = 0; dia <= 6; dia++) {
-    for (const a of semanaA[dia] || []) for (const b of semanaB[dia] || []) {
-      if (a.inicio < b.fin && a.fin > b.inicio) return true;
-    }
-  }
-  return false;
-}
+const { normalizarSemana, semanasSeCruzan } = require('../servicios/semana');
+router.use('/calendarios', require('./calendarios'));
 
 router.get('/categorias', async (req, res) => {
   try {
@@ -313,12 +288,19 @@ router.get('/bloqueos-medicos', async (req, res) => {
 });
 
 router.post('/bloqueos-medicos', async (req, res) => {
-  const { medico_id,sede_id,fecha,hora_inicio,hora_fin,motivo }=req.body;
-  if (!medico_id || !sede_id || !fecha || !hora_inicio || !hora_fin || hora_fin<=hora_inicio) return res.status(400).json({ error: 'Completa medico, sede, fecha y un rango de horas valido' });
+  const {medico_id,sede_id,fecha,motivo}=req.body;
+  const inicio=req.body.dia_completo?'00:00':req.body.hora_inicio;
+  const fin=req.body.dia_completo?'23:59:59':req.body.hora_fin;
+  const ultima=req.body.fecha_fin||fecha;
+  const fechaValida=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'')&&!Number.isNaN(new Date(v+'T00:00:00Z').getTime())&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
+  if(!medico_id||!sede_id||!fechaValida(fecha)||!fechaValida(ultima)||ultima<fecha||!inicio||!fin||fin<=inicio||String(motivo||'').length>150)return res.status(400).json({error:'Completa médico, sede, fechas y un rango de horas válido'});
+  const cantidad=Math.round((new Date(ultima+'T00:00:00Z')-new Date(fecha+'T00:00:00Z'))/86400000)+1;
+  if(cantidad>366)return res.status(400).json({error:'El rango máximo es de 366 días'});
   try {
-    const resultado=await pool.query(`INSERT INTO bloqueos_medicos(medico_id,sede_id,fecha,hora_inicio,hora_fin,motivo) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,[medico_id,sede_id,fecha,hora_inicio,hora_fin,String(motivo||'No disponible').trim()]);
-    res.status(201).json(resultado.rows[0]);
-  } catch (error) { res.status(400).json({ error: error.message || 'No se pudo crear el bloqueo' }); }
+    const r=await pool.query(`INSERT INTO bloqueos_medicos(medico_id,sede_id,fecha,hora_inicio,hora_fin,motivo)
+      SELECT $1,$2,d::date,$4::time,$5::time,$6 FROM generate_series($3::date,$7::date,INTERVAL '1 day') d RETURNING *`,[medico_id,sede_id,fecha,inicio,fin,String(motivo||'No disponible').trim(),ultima]);
+    res.status(201).json(r.rows.length===1?r.rows[0]:{creadas:r.rowCount});
+  }catch(e){res.status(400).json({error:'No se pudo crear la excepción. Revisa los campos y las horas.'});}
 });
 
 router.delete('/bloqueos-medicos/:id', async (req, res) => {

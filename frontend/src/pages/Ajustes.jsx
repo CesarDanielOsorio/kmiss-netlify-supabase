@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { ImagePlus, Package, Pencil, Plus, Search, Tags, Trash2, X } from 'lucide-react';
 import { api } from '../services/api';
 import { urlArchivo } from '../config';
+import Calendarios from '../components/Calendarios';
 
 const VACIO = { nombre: '', orden: 0, activo: true };
 const HOY = new Date().toISOString().split('T')[0];
 const PROMO_VACIA = { alcance: 'producto', producto_id: '', categoria_id: '', descuento_porcentaje: 10, fecha_inicio: HOY, fecha_fin: '', activo: true };
 const SEDE_VACIA = { nombre: '', direccion: '', telefono: '', activo: true };
-const BLOQUEO_VACIO = { medico_id: '', sede_id: '', fecha: HOY, hora_inicio: '12:00', hora_fin: '13:00', motivo: 'Almuerzo' };
+const BLOQUEO_VACIO = { medico_id: '', sede_id: '', fecha: HOY, fecha_fin: '', dia_completo: false, hora_inicio: '12:00', hora_fin: '13:00', motivo: 'Almuerzo' };
 const NOTICIA_VACIA = { titulo: '', resumen: '', contenido: '', fecha_evento: '', enlace_url: '', activo: true };
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -17,6 +18,7 @@ function semanaPredeterminada() {
 function horarioVacio() { return { medico_id: '', sede_id: '', semana: semanaPredeterminada(), activo: true }; }
 
 export default function Ajustes() {
+  const [pestana, setPestana] = useState('calendarios');
   const [categorias, setCategorias] = useState([]);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -267,6 +269,9 @@ export default function Ajustes() {
 
       {error && <div className="ajustes-alerta" role="alert"><span>{error}</span><button onClick={() => setError('')} title="Cerrar aviso"><X size={16} /></button></div>}
 
+      <div className="ajustes-layout"><nav className="ajustes-menu" aria-label="Configuración"><h2>Configuración</h2>{[['calendarios','Calendarios'],['sedes','Sedes'],['categorias','Categorías de productos'],['promociones','Promociones'],['noticias','Noticias y actividades']].map(([id,titulo])=><button key={id} className={pestana===id?'activo':''} onClick={()=>{setPestana(id);setError('');}}>{titulo}</button>)}</nav><div className="ajustes-contenido">
+{pestana==='calendarios'&&<Calendarios medicos={medicos} sedes={sedes} onChange={cargar}/> }
+{pestana==='categorias'&&(
       <section className="ajustes-seccion">
         <div className="ajustes-encabezado">
           <div><h2>Categorías de productos</h2><p>Estas opciones aparecen al crear o editar productos.</p></div>
@@ -285,8 +290,9 @@ export default function Ajustes() {
           </table>
         </div>
       </section>
-
-      <section className="ajustes-seccion ajustes-bloque">
+)}
+{pestana==='promociones'&&(
+      <section className="ajustes-seccion">
         <div className="ajustes-encabezado">
           <div><h2>Promociones de productos</h2><p>Aplica descuentos a un artículo específico o a todos los productos de una categoría.</p></div>
           <button className="boton-primario" onClick={() => abrirPromocion()}><Plus size={16} /> Nueva promoción</button>
@@ -306,8 +312,9 @@ export default function Ajustes() {
           </table>
         </div>
       </section>
-
-      <section className="ajustes-seccion ajustes-bloque">
+)}
+{pestana==='noticias'&&(
+      <section className="ajustes-seccion">
         <div className="ajustes-encabezado"><div><h2>Noticias y actividades</h2><p>Publica conferencias, eventos y novedades que aparecerán en la tienda.</p></div><button className="boton-primario" onClick={() => abrirNoticia()}><Plus size={16} /> Nueva noticia</button></div>
         <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Noticia</th><th>Fecha</th><th>Estado</th><th></th></tr></thead><tbody>
           {noticias.length === 0 ? <tr><td colSpan="4" className="texto-tenue">No hay noticias registradas.</td></tr> : noticias.map((noticia) => <tr key={noticia.id}>
@@ -318,27 +325,24 @@ export default function Ajustes() {
           </tr>)}
         </tbody></table></div>
       </section>
-
-      <section className="ajustes-seccion ajustes-bloque">
+)}
+{pestana==='sedes'&&(
+      <section className="ajustes-seccion">
         <div className="ajustes-encabezado"><div><h2>Sedes</h2><p>Establecimientos disponibles para citas de clientes y recepción.</p></div><button className="boton-primario" onClick={() => abrirSede()}><Plus size={16} /> Nueva sede</button></div>
         <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Nombre</th><th>Dirección</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead><tbody>
           {sedes.map((sede) => <tr key={sede.id}><td><strong>{sede.nombre}</strong></td><td>{sede.direccion}</td><td>{sede.telefono || '—'}</td><td><button className={`interruptor ${sede.activo ? 'activo' : ''}`} onClick={() => alternarSede(sede)} aria-label={`Cambiar estado de ${sede.nombre}`}><span /></button></td><td className="tabla-acciones"><button onClick={() => abrirSede(sede)} title="Editar"><Pencil size={16} /></button><button className="boton-peligro" onClick={() => eliminarSede(sede)} title="Eliminar"><Trash2 size={16} /></button></td></tr>)}
         </tbody></table></div>
       </section>
-
+)}
+{pestana==='calendarios'&&(
       <section className="ajustes-seccion ajustes-bloque">
-        <div className="ajustes-encabezado"><div><h2>Horarios semanales</h2><p>Una configuración reúne todos los días y jornadas de un médico en cada sede.</p></div><button className="boton-primario" onClick={() => abrirHorario()}><Plus size={16} /> Configurar horario</button></div>
-        <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Médico</th><th>Sede</th><th>Días de atención</th><th>Jornada</th><th></th></tr></thead><tbody>
-          {horarios.length === 0 ? <tr><td colSpan="5" className="texto-tenue">No hay horarios configurados.</td></tr> : horarios.map((h) => <tr key={h.id}><td><strong>{h.medico_nombre}</strong></td><td>{h.sede_nombre}</td><td>{diasHorario(h.semana)}</td><td>{resumenHorario(h.semana)}</td><td className="tabla-acciones"><button onClick={() => abrirHorario(h)} title="Editar horario"><Pencil size={16} /></button><button onClick={() => eliminarHorario(h.id)} title="Eliminar horario"><Trash2 size={16} /></button></td></tr>)}
+        <div className="ajustes-encabezado"><div><h2>Excepciones y ausencias</h2><p>Vacaciones, enfermedad o permisos por rango de fechas, con días completos o por horas.</p></div><button className="boton-primario" onClick={() => { setBloqueoFormulario(BLOQUEO_VACIO); setError(''); setModalBloqueo(true); }}><Plus size={16} /> Nueva excepción</button></div>
+        <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Fecha</th><th>Médico</th><th>Sede</th><th>Jornada</th><th>Motivo</th><th></th></tr></thead><tbody>
+          {bloqueos.length === 0 ? <tr><td colSpan="6" className="texto-tenue">No hay excepciones registradas.</td></tr> : bloqueos.map((b) => <tr key={b.id}><td>{String(b.fecha).slice(0,10)}</td><td>{b.medico_nombre}</td><td>{b.sede_nombre}</td><td>{String(b.hora_inicio).slice(0,5)} - {String(b.hora_fin).slice(0,5)}</td><td>{b.motivo}</td><td className="tabla-acciones"><button onClick={() => eliminarBloqueo(b.id)} title="Eliminar bloqueo"><Trash2 size={16} /></button></td></tr>)}
         </tbody></table></div>
       </section>
-
-      <section className="ajustes-seccion ajustes-bloque">
-        <div className="ajustes-encabezado"><div><h2>Bloqueos de agenda</h2><p>Registra almuerzos especiales, permisos, vacaciones o períodos fuera de turno.</p></div><button className="boton-primario" onClick={() => { setBloqueoFormulario(BLOQUEO_VACIO); setError(''); setModalBloqueo(true); }}><Plus size={16} /> Nuevo bloqueo</button></div>
-        <div className="tabla-contenedor"><table className="tabla"><thead><tr><th>Fecha</th><th>Médico</th><th>Sede</th><th>Horario</th><th>Motivo</th><th></th></tr></thead><tbody>
-          {bloqueos.length === 0 ? <tr><td colSpan="6" className="texto-tenue">No hay bloqueos futuros.</td></tr> : bloqueos.map((b) => <tr key={b.id}><td>{String(b.fecha).slice(0,10)}</td><td>{b.medico_nombre}</td><td>{b.sede_nombre}</td><td>{String(b.hora_inicio).slice(0,5)} - {String(b.hora_fin).slice(0,5)}</td><td>{b.motivo}</td><td className="tabla-acciones"><button onClick={() => eliminarBloqueo(b.id)} title="Eliminar bloqueo"><Trash2 size={16} /></button></td></tr>)}
-        </tbody></table></div>
-      </section>
+)}
+</div></div>
 
       {modal && <div className="modal-fondo" onClick={() => setModal(false)}><div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-encabezado"><h2>{editando ? 'Editar categoría' : 'Nueva categoría'}</h2><button className="modal-cerrar" onClick={() => setModal(false)}><X size={18} /></button></div>
@@ -401,14 +405,16 @@ export default function Ajustes() {
         {error && <p className="login-error">{error}</p>}<div className="modal-acciones"><button type="button" className="boton-secundario" onClick={() => setModalHorario(false)}>Cancelar</button><button className="boton-primario">Guardar horario semanal</button></div>
       </form></div></div>}
 
-      {modalBloqueo && <div className="modal-fondo" onClick={() => setModalBloqueo(false)}><div className="modal" onClick={(e) => e.stopPropagation()}><div className="modal-encabezado"><h2>Bloquear agenda</h2><button className="modal-cerrar" onClick={() => setModalBloqueo(false)}><X size={18} /></button></div><form className="formulario-grid" onSubmit={guardarBloqueo}>
+      {modalBloqueo && <div className="modal-fondo" onClick={() => setModalBloqueo(false)}><div className="modal" onClick={(e) => e.stopPropagation()}><div className="modal-encabezado"><h2>Nueva excepción</h2><button className="modal-cerrar" onClick={() => setModalBloqueo(false)}><X size={18} /></button></div><form className="formulario-grid" onSubmit={guardarBloqueo}>
         <label>Médico *<select required value={bloqueoFormulario.medico_id} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,medico_id:Number(e.target.value)})}><option value="">Selecciona</option>{medicos.map((m)=><option key={m.id} value={m.id}>{m.nombre}</option>)}</select></label>
         <label>Sede *<select required value={bloqueoFormulario.sede_id} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,sede_id:Number(e.target.value)})}><option value="">Selecciona</option>{sedes.filter((s)=>s.activo).map((s)=><option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label>
         <label>Fecha *<input type="date" required value={bloqueoFormulario.fecha} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,fecha:e.target.value})} /></label>
-        <label>Desde *<input type="time" required value={bloqueoFormulario.hora_inicio} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_inicio:e.target.value})} /></label>
-        <label>Hasta *<input type="time" required value={bloqueoFormulario.hora_fin} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_fin:e.target.value})} /></label>
+        <label>Fecha final<input type="date" min={bloqueoFormulario.fecha} value={bloqueoFormulario.fecha_fin} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,fecha_fin:e.target.value})}/></label>
+        <label className="campo-checkbox campo-ancho"><input type="checkbox" checked={bloqueoFormulario.dia_completo} onChange={e=>setBloqueoFormulario({...bloqueoFormulario,dia_completo:e.target.checked})}/>Días completos</label>
+        <label>Desde *<input type="time" required={!bloqueoFormulario.dia_completo} disabled={bloqueoFormulario.dia_completo} value={bloqueoFormulario.hora_inicio} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_inicio:e.target.value})} /></label>
+        <label>Hasta *<input type="time" required={!bloqueoFormulario.dia_completo} disabled={bloqueoFormulario.dia_completo} value={bloqueoFormulario.hora_fin} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,hora_fin:e.target.value})} /></label>
         <label className="campo-ancho">Motivo *<input required value={bloqueoFormulario.motivo} onChange={(e) => setBloqueoFormulario({...bloqueoFormulario,motivo:e.target.value})} /></label>
-        {error && <p className="login-error campo-ancho">{error}</p>}<div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={() => setModalBloqueo(false)}>Cancelar</button><button className="boton-primario">Guardar bloqueo</button></div>
+        {error && <p className="login-error campo-ancho">{error}</p>}<div className="modal-acciones campo-ancho"><button type="button" className="boton-secundario" onClick={() => setModalBloqueo(false)}>Cancelar</button><button className="boton-primario">Guardar excepción</button></div>
       </form></div></div>}
     </div>
   );

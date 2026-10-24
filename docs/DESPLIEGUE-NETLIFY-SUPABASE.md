@@ -173,3 +173,12 @@ Referencias consultadas:
 - https://supabase.com/docs/guides/storage/security/access-control
 - https://docs.netlify.com/build/functions/configuration/
 - https://docs.netlify.com/build/functions/usage-and-billing/
+
+
+## Reconstrucción de agenda, calendarios y notificaciones desde capturas
+
+La agenda se reconstruyó como cuadrícula horaria con filtros por sede y médico y modal de detalle. Ajustes usa navegación por secciones y calendarios reutilizables. Las asignaciones actualizan horarios_semanales, por lo que la disponibilidad pública e interna utiliza la misma información. El panel de notificaciones consulta pedidos nuevos reales y enlaza a Pedidos web.
+
+En una instalación Supabase existente, aplicar `db/calendarios.sql` una vez antes de publicar este código. No volver a ejecutar el instalador de base nueva. En la instalación utilizada ya se aplicó esta migración y se vincularon las tres asignaciones visibles en las capturas. Los contadores de asignaciones se calculan con los registros existentes: no se reconstruyeron asignaciones ocultas.
+
+La agenda usa horas de Guatemala para agrupar y mostrar las citas; el backend convierte el timestamp local a un instante con zona explícita. Las excepciones permiten rango de fechas y días completos. No se recuperó el código de Azure; se implementó el comportamiento visible aportado por el usuario.
