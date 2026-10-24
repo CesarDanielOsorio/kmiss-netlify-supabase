@@ -13,7 +13,7 @@ function filtroArchivo(req, file, cb) {
 
 const upload = multer({
   storage: almacenamiento,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 4 * 1024 * 1024 }, // 4 MB: margen para multipart y Base64 en Netlify
   fileFilter: filtroArchivo,
 });
 

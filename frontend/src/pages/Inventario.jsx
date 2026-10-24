@@ -189,7 +189,7 @@ export default function Inventario() {
                   <div className="producto-imagen-preview">
                     {imagenPreview ? <img src={imagenPreview} alt="Vista previa del producto" /> : <ImagePlus size={28} />}
                   </div>
-                  <div><input type="file" accept="image/jpeg,image/png,image/webp" onChange={seleccionarImagen} /><small>JPG, PNG o WEBP. Máximo 5 MB.</small></div>
+                  <div><input type="file" accept="image/jpeg,image/png,image/webp" onChange={seleccionarImagen} /><small>JPG, PNG o WEBP. Máximo 4 MB.</small></div>
                 </div>
               </label>
               <label className="campo-ancho">Nombre *

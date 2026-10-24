@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { guardarImagen, eliminarImagen } = require('../servicios/imagenes');
 const { autenticar, permitirRoles } = require('../middleware/auth');
 const uploadImagenServicio = require('../middleware/uploadImagenServicio');
 
@@ -44,13 +45,9 @@ router.post('/', permitirRoles('administrador'), async (req, res) => {
 router.post('/:id/imagen', permitirRoles('administrador'), uploadImagenServicio.single('imagen'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibio ninguna imagen' });
   try {
-    const imagenUrl = `/api/media/servicios/${req.params.id}?v=${Date.now()}`;
-    const resultado = await pool.query(
-      'UPDATE servicios SET imagen_url=$1, imagen_datos=$2, imagen_mime=$3 WHERE id=$4 RETURNING id,nombre,imagen_url',
-      [imagenUrl, req.file.buffer, req.file.mimetype, req.params.id]
-    );
-    if (!resultado.rows[0]) return res.status(404).json({ error: 'Servicio no encontrado' });
-    res.json(resultado.rows[0]);
+    const registro = await guardarImagen('servicios', req.params.id, req.file);
+    if (!registro) return res.status(404).json({ error: 'Servicio no encontrado' });
+    res.json(registro);
   } catch (error) {
     res.status(500).json({ error: 'No se pudo guardar la imagen del servicio' });
   }
@@ -83,10 +80,11 @@ router.put('/:id', permitirRoles('administrador'), async (req, res) => {
 // DELETE /api/servicios/:id — solo administrador
 router.delete('/:id', permitirRoles('administrador'), async (req, res) => {
   try {
-    const resultado = await pool.query('DELETE FROM servicios WHERE id = $1 RETURNING id', [req.params.id]);
+    const resultado = await pool.query('DELETE FROM servicios WHERE id = $1 RETURNING id,imagen_url', [req.params.id]);
     if (resultado.rows.length === 0) {
       return res.status(404).json({ error: 'Servicio no encontrado' });
     }
+    await eliminarImagen(resultado.rows[0].imagen_url);
     res.json({ mensaje: 'Servicio eliminado correctamente' });
   } catch (error) {
     console.error('Error al eliminar servicio:', error);

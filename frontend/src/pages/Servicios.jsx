@@ -133,7 +133,7 @@ export default function Servicios() {
             </div>
             <form onSubmit={guardar} className="formulario-grid">
               <label className="campo-ancho producto-imagen-campo">Imagen del servicio
-                <div className="producto-imagen-selector"><div className="producto-imagen-preview">{imagenPreview ? <img src={imagenPreview} alt="Vista previa del servicio" /> : <ImagePlus size={28} />}</div><div><input type="file" accept="image/jpeg,image/png,image/webp" onChange={seleccionarImagen} /><small>JPG, PNG o WEBP. Máximo 5 MB.</small></div></div>
+                <div className="producto-imagen-selector"><div className="producto-imagen-preview">{imagenPreview ? <img src={imagenPreview} alt="Vista previa del servicio" /> : <ImagePlus size={28} />}</div><div><input type="file" accept="image/jpeg,image/png,image/webp" onChange={seleccionarImagen} /><small>JPG, PNG o WEBP. Máximo 4 MB.</small></div></div>
               </label>
               <label className="campo-ancho">Nombre *
                 <input required value={formulario.nombre}

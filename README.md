@@ -1,5 +1,7 @@
 # KMISS CLINICA ESTETICA
 
+Despliegue Netlify + Supabase: ver [la guía y los pasos pendientes](docs/DESPLIEGUE-NETLIFY-SUPABASE.md).
+
 Sistema web de gestión para clínica / consultorio. Desarrollado con React, Vite, Node.js, Express y PostgreSQL.
 
 > **Nota:** "Vitalis" es un nombre placeholder. Para cambiarlo al nombre real de tu negocio, edita `frontend/src/config.js` (constante `APP_CONFIG.nombreEmpresa`) — se actualiza en toda la interfaz automáticamente.

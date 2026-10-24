@@ -16,5 +16,7 @@ export const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '
 export const ARCHIVOS_URL = API_URL.replace(/\/api\/?$/, '');
 
 export function urlArchivo(ruta) {
-  return ruta ? `${ARCHIVOS_URL}${ruta}` : null;
+  if (!ruta) return null;
+  if (/^https?:\/\//i.test(ruta)) return ruta;
+  return `${ARCHIVOS_URL}${ruta}`;
 }

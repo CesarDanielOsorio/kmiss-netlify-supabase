@@ -8,3 +8,5 @@ frontend/dist/
 Thumbs.db
 .vscode/
 .idea/
+.netlify/
+*.bundle

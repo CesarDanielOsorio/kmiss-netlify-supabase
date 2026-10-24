@@ -8,6 +8,14 @@ async function peticion(endpoint, opciones = {}) {
   const token = obtenerToken();
   const esFormData = opciones.body instanceof FormData;
 
+  if (esFormData) {
+    for (const valor of opciones.body.values()) {
+      if (valor instanceof File && valor.size > 4 * 1024 * 1024) {
+        throw new Error('El archivo supera el máximo de 4 MB');
+      }
+    }
+  }
+
   const respuesta = await fetch(`${API_URL}${endpoint}`, {
     ...opciones,
     headers: {

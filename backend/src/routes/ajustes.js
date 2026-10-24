@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../db');
+const { guardarImagen, eliminarImagen } = require('../servicios/imagenes');
 const { autenticar, permitirRoles } = require('../middleware/auth');
 const uploadImagenNoticia = require('../middleware/uploadImagenNoticia');
 
@@ -193,20 +194,17 @@ router.put('/noticias/:id', async (req, res) => {
 router.post('/noticias/:id/imagen', uploadImagenNoticia.single('imagen'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No se recibio ninguna imagen' });
   try {
-    const imagenUrl = `/api/media/noticias/${req.params.id}?v=${Date.now()}`;
-    const resultado = await pool.query(
-      'UPDATE noticias SET imagen_url=$1,imagen_datos=$2,imagen_mime=$3,actualizado_en=NOW() WHERE id=$4 RETURNING id,titulo,imagen_url',
-      [imagenUrl, req.file.buffer, req.file.mimetype, req.params.id]
-    );
-    if (!resultado.rows[0]) return res.status(404).json({ error: 'Noticia no encontrada' });
-    res.json(resultado.rows[0]);
+    const registro = await guardarImagen('noticias', req.params.id, req.file);
+    if (!registro) return res.status(404).json({ error: 'Noticia no encontrada' });
+    res.json(registro);
   } catch (error) { res.status(500).json({ error: 'No se pudo guardar la imagen de la noticia' }); }
 });
 
 router.delete('/noticias/:id', async (req, res) => {
   try {
-    const resultado = await pool.query('DELETE FROM noticias WHERE id=$1 RETURNING id', [req.params.id]);
+    const resultado = await pool.query('DELETE FROM noticias WHERE id=$1 RETURNING id,imagen_url', [req.params.id]);
     if (!resultado.rows[0]) return res.status(404).json({ error: 'Noticia no encontrada' });
+    await eliminarImagen(resultado.rows[0].imagen_url);
     res.json({ mensaje: 'Noticia eliminada' });
   } catch (error) {
     res.status(500).json({ error: 'No se pudo eliminar la noticia' });
