@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
@@ -9,6 +9,7 @@ import { resumirCarga } from './resumir-carga.mjs';
 const ahora = new Date('2026-10-23T12:00:00Z');
 const entorno = { AMBIENTE: 'QA', QA_HOST: 'kmiss-calidad-qa.azurewebsites.net', BASE_URL: 'https://kmiss-calidad-qa.azurewebsites.net', PROD_HOST: 'kmiss-produccion.azurewebsites.net', MEDICO_ID: '7', SEDE_ID: '2', SERVICIO_ID: '3', FECHA: '2026-10-30' };
 const configurar = cambios => configurarCarga({ ...entorno, ...cambios }, ahora);
+describe('Controles de preparación QA KMISS', () => {
 test('carga selecciona catálogo y disponibilidad con referencias', () => {
   assert.match(configurar({}).disponibilidad, /medico_id=7&sede_id=2&servicio_id=3&fecha=2026-10-30$/);
   assert.match(configurar({}).catalogo, /\/api\/tienda\/productos$/);
@@ -115,4 +116,5 @@ test('escenario mantiene rampa y cinco minutos sostenidos y tolera JSON inválid
   contexto.ejecutar(); assert.equal(urls.length, 2); assert.equal(comprobaciones.every(c => c === false), true);
   const salida = contexto.resumenFinal(resumen());
   assert.equal(JSON.parse(salida['load/resultados/resumen-k6.json']).metrics.checks.values.rate, 1);
+});
 });
